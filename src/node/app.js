@@ -1,9 +1,13 @@
 const http = require('http');
 const url = require('url');
-const { Client } = require('pg');
 const querystring = require('querystring');
-var express = require('express')
-var app = express();
+const express = require('express')
+const { Client } = require('pg');
+const app = express();
+const PostgresRepository = require('./postgresRepository');
+
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 const client = new Client({
     user: 'postgres',
@@ -13,40 +17,77 @@ const client = new Client({
     port: 5432,
 });
 
-console.log(`connecting to database`);
-client.connect(function(err) {
-    if (err) { throw err };
-    console.log("Connected!");
+client.connect(function(error) {
+    if (error) { throw error };
+    console.log('Connected!');
 });
 
-const GetHeroes = async() => {
-    console.log(`receiving heroes`);
-    var records = await client.query('SELECT * FROM "Hero"');
+const repository = new PostgresRepository(client);
 
-    console.log(`mapping result`);
-    return records.rows.map(hero => {
-        return { id: hero.Id, name: hero.Name }
-    })
-};
+app.get('/', async(request, response) => {
+    console.log(`GET heroes`);
 
-const server = http.createServer(async(request, response) => {
-    const urlParameters = url.parse(request.url, true);
-    console.log(urlParameters);
+    let heroes = await repository.getHeroesAsync();
 
-    // request.method
-    var heroes = await GetHeroes();
-    console.log(`heroes received`);
+    let searchText = request.query.searchText;
+    if (searchText) {
+        searchText = searchText.toLowerCase();
+        heroes = heroes.find(heroes => heroes.name.toLowerCase().startsWith(searchText));
+    }
 
-    response.statusCode = 200;
+    completeResponse(response, 200, heroes);
+});
+
+app.get('/:id', async(request, response) => {
+    console.log('GET hero by id: ', request.params.id);
+
+    let heroes = await repository.getHeroesAsync();
+
+    const id = parseInt(request.params.id);
+    heroes = heroes.find(heroes => heroes.id == id);
+
+    completeResponse(response, 200, heroes);
+});
+
+app.post('/', async(request, response) => {
+    const hero = request.body;
+    await repository.createHeroAsync(hero);
+
+    completeResponse(response, 200, hero);
+});
+
+app.delete('/:id', async(request, response) => {
+    console.log('Delete hero by id: ', request.params.id);
+
+    const id = parseInt(request.params.id);
+    await repository.deleteHeroAsync(id);
+
+    completeResponse(response, 200);
+});
+
+app.put('/', async(request, response) => {
+    const hero = request.body;
+
+    await repository.updateHeroAsync(hero);
+
+    completeResponse(response, 200);
+});
+
+const completeResponse = (response, statusCode, body) => {
+    response.statusCode = statusCode;
     response.setHeader('Content-Type', 'application/json');
     response.setHeader('Access-Control-Allow-Origin', 'http://localhost:4200');
 
-    response.end(JSON.stringify(heroes));
-});
+    if (body) {
+        response.end(JSON.stringify(body));
+    } else {
+        response.end();
+    }
+}
 
 // setup listening
-const hostname = '127.0.0.1';
+const hostname = 'localhost';
 const port = 3000;
-server.listen(port, hostname, () => {
+app.listen(port, hostname, () => {
     console.log(`Server running at http://${hostname}:${port}/`);
 });
