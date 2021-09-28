@@ -3,7 +3,9 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  production: false
+  production: false,
+  signalUrl: "https:localhost:49163/broadcast",
+  heroesApiUrl: "http://localhost:3000",
 };
 
 /*

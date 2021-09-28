@@ -12,11 +12,10 @@ export function asyncError<T>(errorObject: any) {
 
 describe('HeroService', () => {
   let systemUnderTest: HeroService;
-  let httpClientMock: jasmine.SpyObj<HttpClient>;  
+  let httpClientMock: jasmine.SpyObj<HttpClient>;
   let messageServiceMock: jasmine.SpyObj<MessageService>;
 
   beforeEach(() => {
-    // TODO: spy on other methods too
     httpClientMock = jasmine.createSpyObj('HttpClient', ['get']);
     messageServiceMock = jasmine.createSpyObj('MessageService', ['add']);
     systemUnderTest = new HeroService(httpClientMock, messageServiceMock);
@@ -26,9 +25,9 @@ describe('HeroService', () => {
     expect(systemUnderTest).toBeTruthy();
   });
 
-  it('should return expected heroes (HttpClient called once)', (done: DoneFn) => {
+  it('should return result when server returns response', (done: DoneFn) => {
     // arrange
-    const expectedHeroes: Hero[] = [{ id: 1, name: 'A' }, { id: 2, name: 'B' }];  
+    const expectedHeroes: Hero[] = [{ id: 1, name: 'A' }, { id: 2, name: 'B' }];
     httpClientMock.get.and.returnValue(of(expectedHeroes));
 
     // act
@@ -41,12 +40,12 @@ describe('HeroService', () => {
       },
       done.fail
     );
-    
-  
+
     expect(httpClientMock.get.calls.count()).toBe(1, 'one call');
   });
-  
-  it('should catch an error when the server returns a 404', (done: DoneFn) => {
+
+  it('should catch an error when server returns 404', (done: DoneFn) => {
+    //arrange
     const errorResponse = new HttpErrorResponse({
       error: 'test 404 error',
       status: 404, statusText: 'Not Found'
@@ -56,7 +55,7 @@ describe('HeroService', () => {
 
     // act
     systemUnderTest.getHeroes().subscribe(
-      
+
     // assert
       heroes => {
         expect(heroes).toEqual([], 'expected heroes');
@@ -64,5 +63,5 @@ describe('HeroService', () => {
       },
       done.fail
     );
-   });
+  });
 });
